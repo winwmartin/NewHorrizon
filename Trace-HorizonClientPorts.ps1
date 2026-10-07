@@ -259,7 +259,7 @@ function Get-DescendantPids {
         $changed = $false
         foreach ($p in $procs) { if ($set.Contains([int]$p.ParentProcessId) -and $set.Add([int]$p.ProcessId)) { $changed = $true } }
     }
-    return $set
+    return @($set)   # callers rebuild a HashSet; returning the set itself would be unrolled by the pipeline
 }
 
 function Get-AuditSetting {
@@ -377,7 +377,7 @@ try {
         $now = Get-Date
         if (($now - $lastTree).TotalSeconds -ge 2) {
             $roots = @($proc.Id) + @(Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | ForEach-Object Id)
-            $pidSet = Get-DescendantPids -RootPids $roots; $lastTree = $now
+            $pidSet = [System.Collections.Generic.HashSet[int]]::new([int[]]@(Get-DescendantPids -RootPids $roots)); $lastTree = $now
         }
         $rows = Get-NetTCPConnection -ErrorAction SilentlyContinue | Where-Object { $pidSet.Contains([int]$_.OwningProcess) } |
             ForEach-Object { [pscustomobject]@{ PID = $_.OwningProcess; State = "$($_.State)"; LocalAddress = "$($_.LocalAddress)"; LocalPort = $_.LocalPort; RemoteAddress = "$($_.RemoteAddress)"; RemotePort = $_.RemotePort } }
